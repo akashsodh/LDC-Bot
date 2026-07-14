@@ -18,7 +18,7 @@ ADMIN_CHANNEL_ID = -1004335119150
 
 # ⚠️ यहाँ अपने RENDER APP का नाम डालेंगे (स्टेप 3 के बाद)
 # उदाहरण: "https://ldc-bot-xyz.onrender.com"
-RENDER_APP_URL = "https://your-app-name.onrender.com" 
+RENDER_APP_URL = "https://ldc-omr-bot.onrender.com" 
 
 # 📍 RELATIVE PATHS (Render के लिए बेस्ट)
 USER_DIR = "./"
