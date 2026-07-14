@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LDC OMR Editor</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #000000);
+            margin: 0;
+            padding: 15px;
+            padding-bottom: 80px; /* Space for submit button */
+        }
+        h2 { text-align: center; font-size: 18px; margin-bottom: 20px; color: var(--tg-theme-text-color); }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+        }
+        .question-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--tg-theme-secondary-bg-color, #ffffff);
+            padding: 8px 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .q-num { font-weight: bold; width: 35px; font-size: 14px; }
+        .options { display: flex; gap: 5px; }
+
+        .bubble {
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            border: 1px solid #007bff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold;
+            color: #007bff; background: transparent;
+            cursor: pointer; transition: all 0.2s;
+        }
+        /* Selected State */
+        .bubble.selected {
+            background-color: #007bff; color: white; border-color: #007bff;
+        }
+        /* Blank/None Option */
+        .bubble.blank { border-color: #dc3545; color: #dc3545; }
+        .bubble.blank.selected { background-color: #dc3545; color: white; }
+
+        #submitBtn {
+            position: fixed; bottom: 15px; left: 5%; width: 90%;
+            background-color: var(--tg-theme-button-color, #28a745);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none; padding: 15px; font-size: 16px; font-weight: bold;
+            border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>📝 OMR वेरिफिकेशन (AI Scanned)</h2>
+    <p style="text-align:center; font-size:12px; margin-top:-10px;">गलत विकल्प को टच करके सुधारें</p>
+
+    <div class="grid-container" id="omrGrid">
+        </div>
+
+    <button id="submitBtn" onclick="submitOMR()">✅ फाइनल सबमिट करें</button>
+
+    <script>
+        // Telegram Web App Initialize
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Open in full screen
+
+        // URL से AI का स्कैन किया हुआ डेटा निकालना (जैसे: ?data={"1":"A","2":"C"})
+        const urlParams = new URLSearchParams(window.location.search);
+        let aiData = {};
+        try {
+            if(urlParams.has('data')) {
+                aiData = JSON.parse(decodeURIComponent(urlParams.get('data')));
+            }
+        } catch(e) { console.error("Data parsing error"); }
+
+        const totalQuestions = 150;
+        const options = ['A', 'B', 'C', 'D', 'E', 'BLANK'];
+        const grid = document.getElementById('omrGrid');
+
+        // यूज़र के फाइनल आंसर यहाँ सेव होंगे
+        let finalAnswers = {};
+
+        // 150 सवालों की ग्रिड बनाना
+        for(let i = 1; i <= totalQuestions; i++) {
+            let qStr = i.toString();
+            // AI का पढ़ा हुआ आंसर, अगर नहीं है तो BLANK
+            let currentAns = aiData[qStr] ? aiData[qStr].toUpperCase() : 'BLANK';
+            finalAnswers[qStr] = currentAns;
+
+            let row = document.createElement('div');
+            row.className = 'question-row';
+
+            let qNum = document.createElement('div');
+            qNum.className = 'q-num';
+            qNum.innerText = qStr + ".";
+            row.appendChild(qNum);
+
+            let optsDiv = document.createElement('div');
+            optsDiv.className = 'options';
+
+            options.forEach(opt => {
+                let btn = document.createElement('div');
+                btn.className = 'bubble' + (opt === 'BLANK' ? ' blank' : '');
+                btn.innerText = opt === 'BLANK' ? '-' : opt; // BLANK के लिए '-' दिखाएं
+
+                // अगर यह आंसर सेलेक्टेड है
+                if(currentAns === opt) btn.classList.add('selected');
+
+                // क्लिक करने पर आंसर चेंज करने का लॉजिक
+                btn.onclick = function() {
+                    // पहले से सेलेक्टेड को हटाओ
+                    Array.from(optsDiv.children).forEach(c => c.classList.remove('selected'));
+                    // नए को सेलेक्ट करो
+                    btn.classList.add('selected');
+                    finalAnswers[qStr] = opt;
+                };
+                optsDiv.appendChild(btn);
+            });
+            row.appendChild(optsDiv);
+            grid.appendChild(row);
+        }
+
+        // टेलीग्राम बोट को डेटा वापस भेजना
+        function submitOMR() {
+            tg.MainButton.showProgress();
+            // JSON बनाकर बोट को भेज दें
+            tg.sendData(JSON.stringify(finalAnswers));
+        }
+    </script>
+</body>
+</html>
